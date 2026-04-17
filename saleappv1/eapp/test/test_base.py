@@ -3,13 +3,18 @@ from flask import Flask
 
 from eapp import db
 from eapp.models import Product
+from eapp.index import register_routers
 
 
 def create_app():
     app = Flask(__name__)
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
     app.config["PAGE_SIZE"] = 2
+    app.config["TESTING"] = True
+    app.secret_key = 'ASFGAF%$&E%DGF%$GDG$%YWEFSGHDR'
     db.init_app(app)
+
+    register_routers(app=app)
 
     return app
 
@@ -23,6 +28,9 @@ def test_app():
         yield app
         db.drop_all()
 
+@pytest.fixture
+def test_client(test_app):
+    return test_app.test_client()
 
 @pytest.fixture
 def test_session(test_app):
