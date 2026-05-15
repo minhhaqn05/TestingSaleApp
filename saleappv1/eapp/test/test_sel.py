@@ -1,8 +1,13 @@
+from selenium.common import NoSuchElementException
 from selenium.webdriver.common.by import By
+from sqlalchemy.ext.asyncio import async_sessionmaker
 
+from eapp.test.pages.CartPage import CartPage
 from eapp.test.pages.HomePage import HomePage
+from eapp.test.pages.LoginPage import LoginPage
 from eapp.test.test_base import driver, test_app
 import time
+import pytest
 
 def test_search_products(driver):
     # driver.get('http://127.0.0.1:5000/')
@@ -26,3 +31,72 @@ def test_order(driver):
 
     e = driver.find_element(By.CLASS_NAME, 'cart-counter')
     assert int(e.text) == 3
+
+def test_login_success(driver):
+    login = LoginPage(driver=driver)
+    login.open_page()
+    login.login(username='admin', password='123456')
+
+    time.sleep(1)
+
+    assert driver.current_url == 'http://127.0.0.1:5000/'
+
+    e = driver.find_element(By.CSS_SELECTOR, '#collapsibleNavbar > ul > li:nth-child(5) > a')
+    assert (f'Chào admin' in e.text)
+
+def test_login_redirect_success(driver):
+    login = LoginPage(driver=driver)
+    login.open_page(url='http://127.0.0.1:5000/login?next=/cart')
+    login.login(username='admin', password='123456')
+
+    time.sleep(1)
+
+    assert driver.current_url == 'http://127.0.0.1:5000/cart'
+
+    e = driver.find_element(By.CSS_SELECTOR, '#collapsibleNavbar > ul > li:nth-child(5) > a')
+    assert (f'Chào admin' in e.text)
+
+def test_pay_success(driver):
+    home = HomePage(driver=driver)
+    home.open_page()
+    home.order()
+
+    time.sleep(1)
+
+    login = LoginPage(driver=driver)
+    login.open_page()
+    login.login(username='admin', password='123456')
+
+    time.sleep(1)
+
+    cart = CartPage(driver=driver)
+    cart.open_page()
+    cart.pay()
+
+    time.sleep(1)
+
+    with pytest.raises(NoSuchElementException):
+        driver.find_element(By.TAG_NAME, 'table')
+
+
+def test_update_cart(driver):
+    home = HomePage(driver=driver)
+    home.open_page()
+    home.order()
+
+    time.sleep(1)
+
+    login = LoginPage(driver=driver)
+    login.open_page()
+    login.login(username='admin', password='123456')
+
+    time.sleep(1)
+
+    cart = CartPage(driver=driver)
+    cart.open_page()
+    cart.update_cart_item(3)
+
+    driver.implicitly_wait(3)
+
+    e = driver.find_element(By.CLASS_NAME, 'cart-counter')
+    assert int(e.text) == 4
